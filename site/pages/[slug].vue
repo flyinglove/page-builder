@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import type { PageSchema } from "../types"
-import { useRenderNode } from "../composables/useRenderNode"
-
+import type { SchemaNode } from "../types"
 const route = useRoute()
 const slug = computed(() => (route.params.slug as string) || "home")
 
-const { data: page } = await useAsyncData<PageSchema>(
+const { data: page, error } = await useAsyncData(
   () => `page:${slug.value}`,
   () => $fetch(`/api/pages/${slug.value}`),
   { server: true }
 )
+
+if (error.value) {
+  console.error("Fetch schema error:", error.value)
+}
 
 if (page.value) {
   useHead({
@@ -17,14 +19,14 @@ if (page.value) {
     meta: [{ name: "description", content: page.value.description || "" }],
   })
 }
-
-const { renderNode } = useRenderNode()
 </script>
 
 <template>
   <div>
-    <component :is="'div'" v-for="(node, i) in page?.body || []" :key="i">
-      <component :is="renderNode(node)" />
-    </component>
+    <Renderer
+      v-for="(node, i) in (page?.body as SchemaNode[] || [])"
+      :key="i"
+      :node="node"
+    />
   </div>
 </template>
